@@ -34,41 +34,80 @@ describe("Exchange Contract", function () {
   describe("Add Liquidity", function () {
     it("should add liquidity to exchange contract", async function () {
       await Token.connect(userA).approve(Exchange.address, toWei("500"));
-      await Exchange.connect(userA).addLiquidity(toWei("500"), { value: toWei("100")});
+      await Exchange.connect(userA).addLiquidity(toWei("500"), {
+        value: toWei("100"),
+      });
 
       expect(await getBalance(Exchange.address)).to.equal(toWei("100"));
       expect(await Exchange.getReserve()).to.equal(toWei("500"));
     });
   });
 
-  describe("Get Price", function (){
-
+  describe("Get Price", function () {
     it("should get the correct price", async function () {
       await Token.connect(userA).approve(Exchange.address, toWei("500"));
-      await Exchange.connect(userA).addLiquidity(toWei("500"), { value: toWei("100")});
+      await Exchange.connect(userA).addLiquidity(toWei("500"), {
+        value: toWei("100"),
+      });
 
-      //ETH per 1 token
-      expect(
-              (await Exchange.getEthAmount(toWei("10"))).toString()
-      ).to.equal("1960784313725490196");
+      // ETH per 1 token
+      expect((await Exchange.getEthAmount(toWei("10"))).toString()).to.equal(
+        "1960784313725490196"
+      );
 
-      //token per 1 ETH
-      expect(
-              (await Exchange.getTokenAmount(toWei("1"))).toString()
-      ).to.equal("4950495049504950495");
+      // token per 1 ETH
+      expect((await Exchange.getTokenAmount(toWei("1"))).toString()).to.equal(
+        "4950495049504950495"
+      );
     });
 
     it("should get the correct reserves", async function () {
       await Token.connect(userA).approve(Exchange.address, toWei("500"));
-      await Exchange.connect(userA).addLiquidity(toWei("500"), { value: toWei("100")});
+      await Exchange.connect(userA).addLiquidity(toWei("500"), {
+        value: toWei("100"),
+      });
 
       const tokenReserve = await Exchange.getReserve();
       const etherReserve = await getBalance(Exchange.address);
 
-      expect(fromWei(tokenReserve.toString())).to.equal("500.0")
+      expect(fromWei(tokenReserve.toString())).to.equal("500.0");
       expect(fromWei(etherReserve.toString())).to.equal("100.0");
     });
-
   });
 
+  describe("Swap Tokens", function () {
+    it("should swap tokens for ETH", async function () {
+      await Token.connect(userA).approve(Exchange.address, toWei("500"));
+      await Exchange.connect(userA).addLiquidity(toWei("500"), {
+        value: toWei("100"),
+      });
+
+      const swapTokenAmount = toWei("50");
+      await Token.connect(userA).approve(Exchange.address, swapTokenAmount);
+      const balanceBeforeSwap = await getBalance(userA.address);
+      await Exchange.connect(userA).tokenToEthSwap(swapTokenAmount, 0);
+      const balanceAfterSwap = await getBalance(userA.address);
+
+      expect(
+        parseFloat(fromWei(balanceAfterSwap.sub(balanceBeforeSwap).toString()))
+      ).to.gt(0);
+    });
+
+    it("should swap ETH for tokens", async function () {
+      await Token.connect(userA).approve(Exchange.address, toWei("500"));
+      await Exchange.connect(userA).addLiquidity(toWei("500"), {
+        value: toWei("100"),
+      });
+
+      const balanceBeforeSwap = await Token.balanceOf(userA.address);
+      await Exchange.connect(userA).ethToTokenSwap(0, {
+        value: toWei("10"),
+      });
+      const balanceAfterSwap = await Token.balanceOf(userA.address);
+
+      expect(
+        parseFloat(fromWei(balanceAfterSwap.sub(balanceBeforeSwap).toString()))
+      ).to.gt(0);
+    });
+  });
 });
